@@ -25,7 +25,7 @@ class RAGPipeline:
         
         if not relevant_docs:
             return {
-                "answer": "I couldn't find any relevant information to answer your question.",
+                "answer": "I don't know.",
                 "sources": []
             }
         
