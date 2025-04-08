@@ -7,9 +7,10 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma
+from langchain_community.vectorstores import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain.document_loaders import TextLoader
+from langchain_community.document_loaders import TextLoader
+from langchain.schema import Document
 import chromadb
 
 from config import GEMINI_API_KEY, VECTORSTORE_CONFIG, MODEL_CONFIG
@@ -29,17 +30,53 @@ class DocumentProcessor:
     def load_and_split_documents(self, directory_path: str) -> List[Any]:
         """Load and split documents from a directory"""
         documents = []
+        directory_path = os.path.abspath(directory_path)
+        
+        if not os.path.exists(directory_path):
+            logger.error(f"Directory does not exist: {directory_path}")
+            return []
+        
         for filename in os.listdir(directory_path):
             if filename.endswith('.txt'):
                 file_path = os.path.join(directory_path, filename)
                 try:
-                    loader = TextLoader(file_path)
-                    documents.extend(loader.load())
+                    if not os.path.exists(file_path):
+                        logger.error(f"File does not exist: {file_path}")
+                        continue
+                    
+                    # Read the file content directly
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        text = f.read()
+                        if not text.strip():
+                            logger.error(f"File is empty: {file_path}")
+                            continue
+                        
+                        # Create document with metadata
+                        doc = Document(
+                            page_content=text,
+                            metadata={
+                                "source": filename,
+                                "file_path": file_path
+                            }
+                        )
+                        documents.append(doc)
+                        logger.info(f"Successfully loaded document from {filename}")
                 except Exception as e:
                     logger.error(f"Error loading {filename}: {str(e)}")
+                    continue
         
-        # Split documents into chunks
-        return self.text_splitter.split_documents(documents)
+        if not documents:
+            logger.error(f"No documents were loaded from {directory_path}")
+            return []
+        
+        try:
+            # Split documents into chunks
+            split_docs = self.text_splitter.split_documents(documents)
+            logger.info(f"Successfully split {len(documents)} documents into {len(split_docs)} chunks")
+            return split_docs
+        except Exception as e:
+            logger.error(f"Error splitting documents: {str(e)}")
+            return []
 
 class VectorStoreManager:
     def __init__(self, google_api_key: str, persist_directory: str):
@@ -83,6 +120,15 @@ def process_document_directory(input_dir: str, output_dir: str) -> List[Dict[str
     """Process PDF and DOCX documents in a directory"""
     metadata_list = []
     
+    # Convert to absolute paths
+    input_dir = os.path.abspath(input_dir)
+    output_dir = os.path.abspath(output_dir)
+    
+    # Verify input directory exists
+    if not os.path.exists(input_dir):
+        logger.error(f"Input directory does not exist: {input_dir}")
+        return []
+    
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
     
@@ -92,14 +138,26 @@ def process_document_directory(input_dir: str, output_dir: str) -> List[Dict[str
             input_path = os.path.join(input_dir, filename)
             output_path = os.path.join(output_dir, f"{Path(filename).stem}.txt")
             
+            if not os.path.exists(input_path):
+                logger.error(f"PDF file does not exist: {input_path}")
+                continue
+                
             try:
                 # Open PDF document
                 doc = fitz.open(input_path)
+                
+                if doc.page_count == 0:
+                    logger.error(f"PDF file is empty: {filename}")
+                    continue
                 
                 # Extract text from each page
                 text = ""
                 for page in doc:
                     text += page.get_text()
+                
+                if not text.strip():
+                    logger.error(f"No text content extracted from {filename}")
+                    continue
                 
                 # Save extracted text
                 with open(output_path, 'w', encoding='utf-8') as f:
@@ -121,6 +179,9 @@ def process_document_directory(input_dir: str, output_dir: str) -> List[Dict[str
             finally:
                 if 'doc' in locals():
                     doc.close()
+    
+    if not metadata_list:
+        logger.error(f"No PDF documents were processed in {input_dir}")
     
     return metadata_list
 
@@ -190,8 +251,17 @@ logger = logging.getLogger(__name__)
 def process_documents(pdf_directory: str, output_directory: str) -> None:
     """Process PDF and DOCX documents and create vector store"""
     try:
+        # Ensure output directory exists
+        os.makedirs(output_directory, exist_ok=True)
+        
+        # Convert relative paths to absolute paths
+        pdf_directory = os.path.abspath(pdf_directory)
+        output_directory = os.path.abspath(output_directory)
+        
         # Process documents
         metadata_list = process_document_directory(pdf_directory, output_directory)
+        if not metadata_list:
+            raise ValueError("No documents were processed successfully")
         logger.info(f"Processed {len(metadata_list)} documents")
         
         # Initialize document processor
@@ -202,6 +272,8 @@ def process_documents(pdf_directory: str, output_directory: str) -> None:
         
         # Load and split documents
         documents = document_processor.load_and_split_documents(output_directory)
+        if not documents:
+            raise ValueError("No documents were loaded for processing")
         
         # Initialize vector store manager
         vector_store_manager = VectorStoreManager(
@@ -250,16 +322,21 @@ def scrape_website(base_url: str, output_directory: str) -> None:
 def process_all() -> None:
     """Process all documents and websites"""
     try:
+        # Set up output directories
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        insurance_output_dir = os.path.join(base_dir, "backend", "data", "processed", "insurance")
+        angelone_output_dir = os.path.join(base_dir, "backend", "data", "processed", "angelone")
+        
         # Process insurance documents
         insurance_metadata = process_document_directory(
-            "Insurance PDFs",
-            "backend/data/insurance_docs"
+            input_dir=os.path.join(base_dir, "backend", "data", "Insurance"),
+            output_dir=insurance_output_dir
         )
         
         # Scrape Angel One support website
         angelone_metadata = scrape_angelone_support(
-            "https://support.angelone.in",
-            "backend/data/angelone_support"
+            base_url="https://support.angelone.in",
+            output_dir=angelone_output_dir
         )
         
         # Initialize document processor
@@ -269,8 +346,8 @@ def process_all() -> None:
         )
         
         # Load and split documents
-        insurance_docs = document_processor.load_and_split_documents("backend/data/insurance_docs")
-        angelone_docs = document_processor.load_and_split_documents("backend/data/angelone_support")
+        insurance_docs = document_processor.load_and_split_documents(insurance_output_dir)
+        angelone_docs = document_processor.load_and_split_documents(angelone_output_dir)
         
         all_documents = insurance_docs + angelone_docs
         

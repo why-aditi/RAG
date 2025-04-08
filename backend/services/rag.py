@@ -16,7 +16,7 @@ class RAGPipeline:
         """Initialize the RAG pipeline"""
         self.retriever = retriever
         genai.configure(api_key=google_api_key)
-        self.model = genai.GenerativeModel('gemini-pro')
+        self.model = genai.GenerativeModel('models/gemini-2.0-flash')
         
     async def answer_question(self, question: str) -> Dict[str, Any]:
         """Answer a question using RAG"""

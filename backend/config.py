@@ -35,7 +35,7 @@ CORS_CONFIG = {
 MODEL_CONFIG = {
     'chunk_size': 1000,
     'chunk_overlap': 200,
-    'model_name': 'gemini-pro',
+    'model_name': 'models/gemini-2.0-flash',
     'temperature': 0.7,
     'top_k': 5
 }
