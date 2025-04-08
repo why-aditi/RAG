@@ -22,27 +22,42 @@ class RAGPipeline:
         """Answer a question using RAG"""
         # Retrieve relevant documents
         relevant_docs = await self.retriever.get_relevant_documents(question)
-        
+
         if not relevant_docs:
             return {
                 "answer": "I don't know.",
                 "sources": []
             }
-        
+
         # Construct prompt with retrieved context
         context = "\n\n".join([doc.page_content for doc in relevant_docs])
-        prompt = f"Based on the following context, please answer the question. If you cannot answer based on the context alone, say so.\n\nContext:\n{context}\n\nQuestion: {question}"
-        
+        prompt = (
+            "Based on the following context, please answer the question. "
+            "If you cannot answer based on the context alone, say 'I don't know.'\n\n"
+            f"Context:\n{context}\n\nQuestion: {question}"
+        )
+
         # Generate response using Gemini
         response = self.model.generate_content(prompt)
-        
+
+        # Handle empty or unhelpful responses
+        if not response.text in response.text.strip().lower():
+            return {
+                "answer": "I don't know.",
+                "sources": [{
+                    "content": doc.page_content,
+                    "metadata": doc.metadata
+                } for doc in relevant_docs]
+            }
+
         return {
-            "answer": response.text,
+            "answer": response.text.strip(),
             "sources": [{
                 "content": doc.page_content,
                 "metadata": doc.metadata
             } for doc in relevant_docs]
         }
+
 
 # Global variables for RAG components
 rag_pipeline = None
