@@ -41,7 +41,7 @@ class RAGPipeline:
         response = self.model.generate_content(prompt)
 
         # Handle empty or unhelpful responses
-        if not response.text in response.text.strip().lower():
+        if not response.text or "i don't know" in response.text.strip().lower():
             return {
                 "answer": "I don't know.",
                 "sources": [{

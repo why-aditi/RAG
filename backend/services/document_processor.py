@@ -85,6 +85,8 @@ class VectorStoreManager:
             google_api_key=google_api_key
         )
         self.persist_directory = persist_directory
+            # Ensure persistence directory exists
+        os.makedirs(self.persist_directory, exist_ok=True)
         self.client_settings = chromadb.config.Settings(
             anonymized_telemetry=False,
             persist_directory=persist_directory,
@@ -251,12 +253,15 @@ logger = logging.getLogger(__name__)
 def process_documents(pdf_directory: str, output_directory: str) -> None:
     """Process PDF and DOCX documents and create vector store"""
     try:
+        # Get the project root directory (two levels up from the current file)
+        base_dir = Path(__file__).resolve().parent.parent.parent
+        
+        # Resolve paths relative to project root
+        pdf_directory = (base_dir / pdf_directory).resolve()
+        output_directory = (base_dir / output_directory).resolve()
+        
         # Ensure output directory exists
         os.makedirs(output_directory, exist_ok=True)
-        
-        # Convert relative paths to absolute paths
-        pdf_directory = os.path.abspath(pdf_directory)
-        output_directory = os.path.abspath(output_directory)
         
         # Process documents
         metadata_list = process_document_directory(pdf_directory, output_directory)

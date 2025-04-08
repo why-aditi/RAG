@@ -1,30 +1,46 @@
 # RAG-Based Customer Support Chatbot
 
-A modern customer support chatbot powered by Retrieval-Augmented Generation (RAG) technology. This project combines web scraping, document processing, and advanced language models to provide accurate, source-truthful responses for customer inquiries.
+A modern chatbot system built using Retrieval-Augmented Generation (RAG) architecture, designed to provide intelligent customer support by leveraging document processing and vector search capabilities.
 
 ## Features
 
-- Web scraping of Angel One support pages
-- PDF parsing for insurance documentation
-- Vector-based retrieval system
-- Source-truthful responses
-- User-friendly React frontend
-- FastAPI backend
+- Document Processing Pipeline
+  - PDF document processing
+  - Web scraping support
+  - Text chunking and vectorization
+- Vector Store Management
+  - ChromaDB integration
+  - Google AI embeddings
+  - Efficient document retrieval
+- Interactive Chat Interface
+  - Real-time responses
+  - Context-aware conversations
+  - Modern React-based UI
 
 ## Project Structure
 
 ```
 ├── frontend/           # React + Vite frontend
-│   ├── src/
-│   │   ├── components/
-│   │   └── assets/
-│   └── public/
+│   ├── src/           # Source code
+│   │   ├── components/# React components
+│   │   ├── assets/    # Static assets
+│   │   └── App.jsx    # Main application component
+│   ├── public/        # Public assets
+│   └── package.json   # Frontend dependencies
 ├── backend/           # FastAPI backend
-│   ├── data/
-│   ├── routes/
-│   ├── services/
-│   └── main.py
+│   ├── data/         # Data storage
+│   │   ├── Insurance/# Insurance documents
+│   │   └── processed/# Processed documents
+│   ├── routes/       # API endpoints
+│   ├── services/     # Business logic
+│   └── main.py       # Application entry point
 ```
+
+## Prerequisites
+
+- Python 3.8 or higher
+- Node.js 16 or higher
+- Google AI API key
 
 ## Setup Instructions
 
@@ -36,7 +52,7 @@ A modern customer support chatbot powered by Retrieval-Augmented Generation (RAG
    cd backend
    ```
 
-2. Create and activate a virtual environment:
+2. Create a virtual environment:
 
    ```bash
    python -m venv venv
@@ -49,15 +65,14 @@ A modern customer support chatbot powered by Retrieval-Augmented Generation (RAG
    pip install -r requirements.txt
    ```
 
-4. Create a `.env` file in the backend directory with necessary environment variables:
+4. Configure environment variables:
 
-   ```env
-   OPENAI_API_KEY=your_api_key_here
-   ```
+   - Create a `config.py` file with your Google AI API key
+   - Set up vector store configuration
 
 5. Start the backend server:
    ```bash
-   python main.py
+   uvicorn main:app --reload
    ```
 
 ### Frontend Setup
@@ -79,55 +94,32 @@ A modern customer support chatbot powered by Retrieval-Augmented Generation (RAG
    npm run dev
    ```
 
-## Dependencies
+## Usage
 
-### Frontend
+### Document Processing
 
-- React
-- Vite
-- Axios
-- TailwindCSS
+1. Place your PDF documents in the `backend/data/Insurance/` directory
+2. The system supports:
+   - PDF document processing
+   - Web scraping from specified URLs
+   - Automatic text chunking and vectorization
 
-### Backend
+### Vector Store Management
 
-- FastAPI
-- ChromaDB
-- OpenAI
-- Python-dotenv
-- BeautifulSoup4
-- PyPDF2
+- Documents are automatically processed and stored in ChromaDB
+- The system uses Google AI embeddings for vector representation
+- Efficient similarity search for relevant document retrieval
 
-## Development
+### Chat Interface
 
-1. Data Collection
+1. Access the chat interface at `http://localhost:5173`
+2. Enter your query in the chat input
+3. The system will:
+   - Retrieve relevant documents
+   - Generate context-aware responses
+   - Maintain conversation history
 
-   - Web scraping from Angel One support pages
-   - PDF parsing of insurance documentation
+## API Endpoints
 
-2. Preprocessing
-
-   - Content chunking
-   - Text cleaning
-   - Metadata extraction
-
-3. Vector Store
-
-   - Embedding generation
-   - ChromaDB integration
-
-4. RAG Pipeline
-   - Query processing
-   - Context retrieval
-   - Response generation
-
-## Contributing
-
-1. Fork the repository
-2. Create a new branch for your feature
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## License
-
-MIT License
+- `POST /chat`: Send chat messages and receive responses
+- `POST /process`: Trigger document processing

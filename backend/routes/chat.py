@@ -16,6 +16,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
+    sources: list
     confidence: str
 
 @router.post('', response_model=ChatResponse)
